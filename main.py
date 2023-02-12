@@ -27,12 +27,13 @@ presets = settings["presets"]
 f.close()
 
 # create spotify object with all scopes
-scope = f"ugc-image-upload, user-read-playback-state, user-modify-playback-state, user-follow-modify, user-read-private, user-follow-read, user-library-modify, user-library-read, streaming, user-read-playback-position, app-remote-control, user-read-email, user-read-currently-playing, user-read-recently-played, playlist-modify-private, playlist-read-collaborative, playlist-read-private, user-top-read, playlist-modify-public"
+scope = "ugc-image-upload, user-read-playback-state, user-modify-playback-state, user-follow-modify, user-read-private, user-follow-read, user-library-modify, user-library-read, streaming, user-read-playback-position, app-remote-control, user-read-email, user-read-currently-playing, user-read-recently-played, playlist-modify-private, playlist-read-collaborative, playlist-read-private, user-top-read, playlist-modify-public"
 
 sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope, client_id=os.getenv("SPOTIFY_CLIENT_ID"), client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"), redirect_uri="http://localhost:8888/callback"), requests_timeout=300)
 
 # everyone likes ASCII art so why not
-print(f'''[spring_green3]
+print(
+    '''[spring_green3]
 :'######::'########:::'#######::'########:'####:'########:'##:::'##:
 '##... ##: ##.... ##:'##.... ##:... ##..::. ##:: ##.....::. ##:'##::
  ##:::..:: ##:::: ##: ##:::: ##:::: ##::::: ##:: ##::::::::. ####:::
@@ -43,7 +44,8 @@ print(f'''[spring_green3]
 :......:::..::::::::::.......::::::..:::::....::..:::::::::::..:::::
 [/spring_green3]
 [hot_pink2]Voice Control for Spotify[/hot_pink2]
-''')
+'''
+)
 
 while True:
     '''
@@ -57,21 +59,21 @@ while True:
     '''
     r = sr.Recognizer()
     command, audio = initialize_voice(recognizer=r)
-    
+
     # recognize speech and using try-except to catch errors
     try:
         command = r.recognize_google(audio_data=audio).lower()
     except sr.UnknownValueError:
-        print(f"[italic red]Could not understand.[/italic red]")
+        print("[italic red]Could not understand.[/italic red]")
         continue
-    
+
     print(f"[medium_purple3]{command}[/medium_purple3]")
     # splitting the command into separate words
     words = command.split()
-    
+
     # checking if the speech recognizer recognized a command
     if len(words) < 1:
-        print(f"[italic red]Could not understand.[/italic red]")
+        print("[italic red]Could not understand.[/italic red]")
         continue
     elif len(words) == 1:
         for preset in presets:
@@ -89,7 +91,7 @@ while True:
                     asyncio.run(play_album(spotify=sp, uri=uri))
                     print(f"[bold deep_sky_blue2]Playing album:[/bold deep_sky_blue2] [italic spring_green3]{name}[/italic spring_green3]")
                     continue
-                
+
                 elif preset["type"] == "artist":
                     name = preset["name"]
                     uri = asyncio.run(get_artist_uri(spotify=sp, name=name))
@@ -121,9 +123,9 @@ while True:
         elif words[0] == "repeat":
             asyncio.run(repeat_track(spotify=sp))
         else:
-            print(f"[italic red]Command not recognized.[/italic red]")
+            print("[italic red]Command not recognized.[/italic red]")
             continue
-    
+
     else:
         # here action is the command, eg: 'play', 'album' or 'artist'
         # and the name is the name of the track/album/artist to be played
@@ -132,26 +134,40 @@ while True:
 
         # Current command actions
         try:
-            if action == "current":
-                if name == "song":
-                    """ Display the current song playing. """
-                    track = asyncio.run(get_current_song(spotify=sp))
-                    print(f"[bold deep_sky_blue2]Current track:[/bold deep_sky_blue2] [italic spring_green3]{track}[/italic spring_green3]")
+            if action == "current" and name == "song":
+                """ Display the current song playing. """
+                track = asyncio.run(get_current_song(spotify=sp))
+                print(f"[bold deep_sky_blue2]Current track:[/bold deep_sky_blue2] [italic spring_green3]{track}[/italic spring_green3]")
         except Exception as action_exception:
             print(f"[italic red]Could not underst{action_exception}and.[/italic red]")
-            
+
         # Go command actions
         try:
-            if action == 'go':
-                if name == 'back':
-                    """ Go Back to previous song. """
-                    asyncio.run(play_previous_song(spotify=sp))
+            if action == 'go' and name == 'back':
+                """ Go Back to previous song. """
+                asyncio.run(play_previous_song(spotify=sp))
         except Exception as e:
             print(f"[italic red]{e}[/italic red]")
-            
+
         # try except block to catch InvaliSearchError
         try:
-            if action == "play":
+            if action == "album":
+                uri = asyncio.run(get_album_uri(spotify=sp, name=name))
+                asyncio.run(play_album(spotify=sp, uri=uri))
+                print(f"[bold deep_sky_blue2]Playing album:[/bold deep_sky_blue2] [italic spring_green3]{name}[/italic spring_green3]")
+
+            elif action == "artist":
+                if name == "random":
+                    random_artist = random.choice(get_user_followed_artists(spotify=sp))
+                    uri = asyncio.run(get_artist_uri(spotify=sp, name=random_artist))
+                    asyncio.run(play_artist(spotify=sp, uri=uri))
+                    print(f"[bold deep_sky_blue2]Playing artist:[/bold deep_sky_blue2] [italic spring_green3]{random_artist}[/italic spring_green3]")
+                else:
+                    uri = asyncio.run(get_artist_uri(spotify=sp, name=name))
+                    asyncio.run(play_artist(spotify=sp, uri=uri))
+                    print(f"[bold deep_sky_blue2]Playing artist:[/bold deep_sky_blue2] [italic spring_green3]{name}[/italic spring_green3]")
+
+            elif action == "play":
                 if name == "random":
                     tracks = asyncio.run(get_user_saved_tracks(spotify=sp))
                     random_track = random.choice(tracks)
@@ -163,23 +179,7 @@ while True:
                     asyncio.run(play_track(spotify=sp, uri=uri))
                     print(f"[bold deep_sky_blue2]Playing track:[/bold deep_sky_blue2] [italic spring_green3]{name}[/italic spring_green3]")
 
-            if action == "album":
-                uri = asyncio.run(get_album_uri(spotify=sp, name=name))
-                asyncio.run(play_album(spotify=sp, uri=uri))
-                print(f"[bold deep_sky_blue2]Playing album:[/bold deep_sky_blue2] [italic spring_green3]{name}[/italic spring_green3]")
-            
-            if action == "artist":
-                if name == "random":
-                    random_artist = random.choice(get_user_followed_artists(spotify=sp))
-                    uri = asyncio.run(get_artist_uri(spotify=sp, name=random_artist))
-                    asyncio.run(play_artist(spotify=sp, uri=uri))
-                    print(f"[bold deep_sky_blue2]Playing artist:[/bold deep_sky_blue2] [italic spring_green3]{random_artist}[/italic spring_green3]")
-                else:
-                    uri = asyncio.run(get_artist_uri(spotify=sp, name=name))
-                    asyncio.run(play_artist(spotify=sp, uri=uri))
-                    print(f"[bold deep_sky_blue2]Playing artist:[/bold deep_sky_blue2] [italic spring_green3]{name}[/italic spring_green3]")
-            
-            if action == "playlist":
+            elif action == "playlist":
                 playlists, playlist_ids = asyncio.run(get_user_playlists(spotify=sp))
                 if name.lower() in playlists:
                     for i in range(len(playlists)):
@@ -193,6 +193,10 @@ while True:
                     continue
 
 
+            elif action == "shuffle":
+                state = name
+                asyncio.run(shuffle(spotify=sp, state=state))
+
             elif action == "volume":
                 t = {'one':1,'two':2,'three':3,'four':4,'five':5,'six':6,'seven':7,'eight':8,'nine':9,'ten':10}  # dictionary for volume
                 if name in t:
@@ -205,10 +209,6 @@ while True:
                     volume = int(name)
                     asyncio.run(change_volume(spotify=sp, volume=volume))
                     print(f"[bold deep_sky_blue2]Volume set to:[/bold deep_sky_blue2] [italic spring_green3]{volume}%[/italic spring_green3]")
-            
-            elif action == "shuffle":
-                state = name
-                asyncio.run(shuffle(spotify=sp, state=state))
 
         except InvalidSearchError:
             print(f"[italic red]Could not find {name}. Try again.[/italic red]")
